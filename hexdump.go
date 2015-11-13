@@ -21,11 +21,16 @@ type Config struct {
 func (c Config) Dump(buf []byte) string {
 	N := c.Width
 	var out bytes.Buffer
-	for rowIndex := 0; rowIndex < len(buf)/N; rowIndex++ {
+	rowIndex := 0
+	for rowIndex*N < len(buf) {
 		a, b := rowIndex*N, (rowIndex+1)*N
+		if b > len(buf) {
+			b = len(buf)
+		}
 		row := buf[a:b]
 		hex, ascii := printable(row)
 		fmt.Fprintf(&out, "%5d: %s | %s\n", a, hex, ascii)
+		rowIndex++
 	}
 	return out.String()
 }
