@@ -5,6 +5,7 @@ package hexdump
 import (
 	"bytes"
 	"fmt"
+	"strings"
 )
 
 // Dump the byte slice to a human-readable hex dump using the default
@@ -22,6 +23,7 @@ func (c Config) Dump(buf []byte) string {
 	N := c.Width
 	var out bytes.Buffer
 	rowIndex := 0
+	maxRowWidth := 0
 	for rowIndex*N < len(buf) {
 		a, b := rowIndex*N, (rowIndex+1)*N
 		if b > len(buf) {
@@ -29,6 +31,13 @@ func (c Config) Dump(buf []byte) string {
 		}
 		row := buf[a:b]
 		hex, ascii := printable(row)
+
+		if len(row) < maxRowWidth {
+			padding := maxRowWidth*2 + maxRowWidth/4 - len(row)*2 - len(row)/4
+			hex += strings.Repeat(" ", padding)
+		}
+		maxRowWidth = len(row)
+
 		fmt.Fprintf(&out, "%5d: %s | %s\n", a, hex, ascii)
 		rowIndex++
 	}

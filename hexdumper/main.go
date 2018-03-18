@@ -18,7 +18,7 @@ func main() {
 	files := kingpin.Arg("file", "File(s) to dump").Required().ExistingFiles()
 	start := kingpin.Flag("start", "Offset to start dump from.").Short('s').Default("0").Bytes()
 	num := kingpin.Flag("num", "Number of bytes to dump.  Defaults to the entire file.").Short('n').Bytes()
-	width := kingpin.Flag("width", "Number of bytes in each row.").Short('w').Default("25").Int()
+	width := kingpin.Flag("width", "Number of bytes in each row.").Short('w').Default("32").Int()
 	kingpin.Parse()
 
 	dumper := hexdump.Config{*width}
