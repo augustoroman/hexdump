@@ -5,6 +5,7 @@ package hexdump
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -14,37 +15,74 @@ func Dump(buf []byte) string { return defaultConfig.Dump(buf) }
 
 // Config allows customizing the dump configuration.
 type Config struct {
-	// Defaults to 32.
+	// Number of bytes from the input buffer to print in a single row. The default
+	// is 32.
 	Width int
 }
 
-// Dump converts the byte slice to a human-readable hex dump.
-func (c Config) Dump(buf []byte) string {
-	N := c.Width
-	var out bytes.Buffer
-	rowIndex := 0
-	maxRowWidth := 0
-	for rowIndex*N < len(buf) {
-		a, b := rowIndex*N, (rowIndex+1)*N
+type dumpState struct {
+	Config
+	rowIndex    int
+	maxRowWidth int
+}
+
+func (s *dumpState) dump(out io.Writer, buf []byte) {
+	N := s.Width
+	for i := 0; i*N < len(buf); i++ {
+		a, b := i*N, (i+1)*N
 		if b > len(buf) {
 			b = len(buf)
 		}
 		row := buf[a:b]
 		hex, ascii := printable(row)
 
-		if len(row) < maxRowWidth {
-			padding := maxRowWidth*2 + maxRowWidth/4 - len(row)*2 - len(row)/4
+		if len(row) < s.maxRowWidth {
+			padding := s.maxRowWidth*2 + s.maxRowWidth/4 - len(row)*2 - len(row)/4
 			hex += strings.Repeat(" ", padding)
 		}
-		maxRowWidth = len(row)
+		s.maxRowWidth = len(row)
 
-		fmt.Fprintf(&out, "%5d: %s | %s\n", a, hex, ascii)
-		rowIndex++
+		fmt.Fprintf(out, "%5d: %s | %s\n", s.rowIndex*N, hex, ascii)
+		s.rowIndex++
 	}
-	return out.String()
 }
 
-var defaultConfig = Config{32}
+func (c Config) newDumpState() *dumpState {
+	s := &dumpState{Config: c}
+	if s.Width == 0 {
+		s.Width = kDefaultWidth
+	}
+	return s
+}
+
+// Dump converts the byte slice to a human-readable hex dump.
+func (c Config) Dump(data []byte) string {
+	var out bytes.Buffer
+	c.newDumpState().dump(&out, data)
+	return out.String()
+
+}
+
+// Read will read from the input io.Reader and write human-readable, formatted
+// hexdumps (with color annotations) to the output. The entire input reader is
+// consumed. Any errors other than io.EOF are returned.
+func (c Config) Stream(in io.Reader, out io.Writer) error {
+	s := c.newDumpState()
+	buf := make([]byte, 1*c.Width)
+	for {
+		n, err := io.ReadFull(in, buf)
+		s.dump(out, buf[:n])
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			return nil
+		} else if err != nil {
+			return err
+		}
+	}
+}
+
+const kDefaultWidth = 32
+
+var defaultConfig = Config{kDefaultWidth}
 
 const (
 	kESC        = "\033["
