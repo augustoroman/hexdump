@@ -3,13 +3,12 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
 	"github.com/augustoroman/hexdump"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin"
 )
 
 func main() {
@@ -54,7 +53,7 @@ func main() {
 	if len(*files) == 0 {
 		var in io.Reader = os.Stdin
 		if *start != 0 {
-			io.Copy(ioutil.Discard, io.LimitReader(in, int64(*start)))
+			io.Copy(io.Discard, io.LimitReader(in, int64(*start)))
 		}
 
 		if *start != 0 {
